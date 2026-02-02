@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jardín de Partículas - Sandbox Satisfactorio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;600&family=Orbitron:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comfortaa', cursive;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: none;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f1e 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
+        }
+        
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 20, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #fff;
+            min-width: 280px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .ui-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .ui-panel::-webkit-scrollbar-track {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+        }
+        
+        .ui-panel::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.5);
+            border-radius: 10px;
+        }
+        
+        .ui-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #667eea, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+        }
+        
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .tool-btn {
+            width: 50px;
+            height: 50px;
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            background: rgba(40, 40, 70, 0.6);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tool-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .tool-btn:hover::before {
+            left: 100%;
+        }
+        
+        .tool-btn:hover {
+            transform: scale(1.1);
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .tool-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: #f093fb;
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.8);
+            transform: scale(1.05);
+        }
+        
+        .slider-group {
+            margin: 15px 0;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #a0a0d0;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: rgba(102, 126, 234, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #f093fb);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #f093fb);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+            border: none;
+        }
+        
+        .clear-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(234, 102, 102, 0.2);
+            border: 2px solid rgba(234, 102, 102, 0.5);
+            border-radius: 10px;
+            color: #ff6b6b;
+            font-family: 'Comfortaa', cursive;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-btn:hover {
+            background: rgba(234, 102, 102, 0.4);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(234, 102, 102, 0.6);
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(20, 20, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px 20px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            color: #a0a0d0;
+            font-size: 12px;
+        }
+        
+        .custom-cursor {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(102, 126, 234, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .custom-cursor::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px;
+            height: 6px;
+            background: #667eea;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #667eea;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .tool-btn.active {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <div class="ui-title">✨ Herramientas</div>
+        
+        <div class="tool-grid">
+            <button class="tool-btn active" data-tool="particles" title="Partículas">✨</button>
+            <button class="tool-btn" data-tool="water" title="Agua">💧</button>
+            <button class="tool-btn" data-tool="sand" title="Arena">🏖️</button>
+            <button class="tool-btn" data-tool="fire" title="Fuego">🔥</button>
+            <button class="tool-btn" data-tool="gravity" title="Gravedad">🌀</button>
+            <button class="tool-btn" data-tool="rainbow" title="Arcoíris">🌈</button>
+            <button class="tool-btn" data-tool="fireworks" title="Fuegos Artificiales">🎆</button>
+            <button class="tool-btn" data-tool="bubbles" title="Burbujas">🫧</button>
+            <button class="tool-btn" data-tool="snow" title="Nieve">❄️</button>
+            <button class="tool-btn" data-tool="lava" title="Lava">🌋</button>
+            <button class="tool-btn" data-tool="electricity" title="Electricidad">⚡</button>
+            <button class="tool-btn" data-tool="stars" title="Estrellas">⭐</button>
+            <button class="tool-btn" data-tool="smoke" title="Humo">💨</button>
+            <button class="tool-btn" data-tool="paint" title="Pintura">🎨</button>
+            <button class="tool-btn" data-tool="plasma" title="Plasma">💜</button>
+            <button class="tool-btn" data-tool="spiral" title="Espiral">🌀</button>
+            <button class="tool-btn" data-tool="confetti" title="Confeti">🎊</button>
+            <button class="tool-btn" data-tool="magic" title="Magia">🪄</button>
+            <button class="tool-btn" data-tool="meteor" title="Meteorito">☄️</button>
+            <button class="tool-btn" data-tool="crystal" title="Cristal">💎</button>
+            <button class="tool-btn" data-tool="wind" title="Viento">🌪️</button>
+            <button class="tool-btn" data-tool="hearts" title="Corazones">❤️</button>
+            <button class="tool-btn" data-tool="vortex" title="Vórtice">🌊</button>
+            <button class="tool-btn" data-tool="lightning" title="Rayo">🌩️</button>
+            <button class="tool-btn" data-tool="DNA" title="ADN">🧬</button>
+            <button class="tool-btn" data-tool="galaxy" title="Galaxia">🌌</button>
+            <button class="tool-btn" data-tool="atoms" title="Átomos">⚛️</button>
+            <button class="tool-btn" data-tool="flowers" title="Flores">🌸</button>
+            <button class="tool-btn" data-tool="butterflies" title="Mariposas">🦋</button>
+            <button class="tool-btn" data-tool="fireflies" title="Luciérnagas">✨</button>
+            <button class="tool-btn" data-tool="blackhole" title="Agujero Negro">⚫</button>
+            <button class="tool-btn" data-tool="nebula" title="Nebulosa">☁️</button>
+            <button class="tool-btn" data-tool="portals" title="Portales">🌀</button>
+            <button class="tool-btn" data-tool="music" title="Notas Musicales">🎵</button>
+            <button class="tool-btn" data-tool="virus" title="Virus">🦠</button>
+            <button class="tool-btn" data-tool="quantum" title="Cuántico">⚡</button>
+            <button class="tool-btn" data-tool="eraser" title="Borrador">🧹</button>
+        </div>
+        
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>Tamaño</span>
+                <span id="sizeValue">20</span>
+            </div>
+            <input type="range" id="sizeSlider" min="5" max="100" value="20">
+        </div>
+        
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>Intensidad</span>
+                <span id="intensityValue">5</span>
+            </div>
+            <input type="range" id="intensitySlider" min="1" max="20" value="5">
+        </div>
+        
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>Gravedad</span>
+                <span id="gravityValue">1.0</span>
+            </div>
+            <input type="range" id="gravitySlider" min="0" max="30" value="10">
+        </div>
+        
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>Fricción</span>
+                <span id="frictionValue">0.98</span>
+            </div>
+            <input type="range" id="frictionSlider" min="80" max="100" value="98">
+        </div>
+        
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>Velocidad Wind</span>
+                <span id="windValue">0</span>
+            </div>
+            <input type="range" id="windSlider" min="-50" max="50" value="0">
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <div class="slider-label">
+                <span>Modo de Interacción</span>
+            </div>
+            <select id="interactionMode" style="width: 100%; padding: 8px; background: rgba(40, 40, 70, 0.6); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 8px; color: #fff; font-family: 'Comfortaa', cursive;">
+                <option value="attract">🧲 Atraer</option>
+                <option value="repel">💥 Repeler</option>
+                <option value="spin">🌀 Rotar</option>
+                <option value="follow">👆 Seguir Cursor</option>
+                <option value="wave">🌊 Onda</option>
+                <option value="explode">💣 Explotar</option>
+                <option value="none" selected>⭕ Ninguno</option>
+            </select>
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <div class="slider-label">
+                <span>Efectos Visuales</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                <button class="clear-btn" style="padding: 8px; font-size: 12px;" id="trailsBtn">👻 Estelas</button>
+                <button class="clear-btn" style="padding: 8px; font-size: 12px;" id="glowBtn">✨ Brillo</button>
+                <button class="clear-btn" style="padding: 8px; font-size: 12px;" id="blurBtn">🌫️ Blur</button>
+                <button class="clear-btn" style="padding: 8px; font-size: 12px;" id="connectBtn">🔗 Conectar</button>
+            </div>
+        </div>
+        
+        <div style="margin: 15px 0; display: flex; gap: 10px;">
+            <button class="clear-btn" style="flex: 1;" id="pauseBtn">⏸️ Pausar</button>
+            <button class="clear-btn" style="flex: 1; background: rgba(102, 234, 102, 0.2); border-color: rgba(102, 234, 102, 0.5); color: #6bffb6;" id="slowBtn">🐌 Slow-Mo</button>
+        </div>
+        
+        <div style="margin: 15px 0; display: flex; gap: 10px;">
+            <button class="clear-btn" style="flex: 1; background: rgba(234, 234, 102, 0.2); border-color: rgba(234, 234, 102, 0.5); color: #f9ff6b;" id="screenshakeBtn">📳 Screenshake</button>
+            <button class="clear-btn" style="flex: 1; background: rgba(234, 102, 234, 0.2); border-color: rgba(234, 102, 234, 0.5); color: #ff6bff;" id="rainbowBgBtn">🌈 Fondo</button>
+        </div>
+        
+        <div style="margin: 15px 0; display: flex; gap: 10px;">
+            <button class="clear-btn" style="flex: 1; background: rgba(102, 234, 234, 0.2); border-color: rgba(102, 234, 234, 0.5); color: #6bfff9;" id="exportBtn">💾 Guardar</button>
+            <button class="clear-btn" style="flex: 1; background: rgba(102, 150, 234, 0.2); border-color: rgba(102, 150, 234, 0.5); color: #6b96ff;" id="randomBtn">🎲 Azar</button>
+        </div>
+        
+        <button class="clear-btn" id="clearBtn">🗑️ Limpiar Todo</button>
+    </div>
+    
+    <div class="stats">
+        <div>Partículas: <span id="particleCount">0</span></div>
+        <div>FPS: <span id="fps">60</span></div>
+        <div style="font-size: 10px; margin-top: 5px; color: #6ba0d0;">Límite: 5,000 partículas</div>
+        <div style="font-size: 10px; color: #6ba0d0;">⏱️ Desaparecen en 10s</div>
+        <div style="font-size: 10px; color: #6ba0d0;">✨ Brillo OFF = +30 FPS</div>
+    </div>
+    
+    <div class="custom-cursor"></div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.querySelector('.custom-cursor');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        let particles = [];
+        let mouseX = 0;
+        let mouseY = 0;
+        let isMouseDown = false;
+        let currentTool = 'particles';
+        let brushSize = 20;
+        let intensity = 5;
+        let frameCount = 0;
+        let lastTime = Date.now();
+        let fps = 60;
+        let isPaused = false;
+        let timeScale = 1;
+        let globalGravity = 0.1;
+        let globalFriction = 0.98;
+        let globalWind = 0;
+        let interactionMode = 'none';
+        let enableTrails = false;
+        let enableGlow = false;
+        let enableBlur = false;
+        let enableConnect = false;
+        let screenshakeEnabled = false;
+        let rainbowBg = false;
+        let shakeX = 0;
+        let shakeY = 0;
+        
+        // Límite de partículas para rendimiento
+        const MAX_PARTICLES = 5000; // Reducido para mejor rendimiento
+        
+        // Partícula base
+        class Particle {
+            constructor(x, y, type = 'particles') {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 0;
+                this.maxLife = 600; // 10 segundos a 60fps
+                this.size = 2 + Math.random() * 3;
+                this.type = type;
+                this.hue = Math.random() * 360;
+                this.gravity = globalGravity;
+                this.friction = globalFriction;
+                this.alpha = 1;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                
+                this.init();
+            }
+            
+            init() {
+                switch(this.type) {
+                    case 'water':
+                        this.hue = 200 + Math.random() * 40;
+                        this.gravity = 0.2;
+                        this.friction = 0.95;
+                        this.size = 3 + Math.random() * 2;
+                        this.maxLife = 600; // 10 segundos a 60fps
+                        break;
+                    case 'sand':
+                        this.hue = 30 + Math.random() * 30;
+                        this.gravity = 0.3;
+                        this.friction = 0.9;
+                        this.size = 2 + Math.random() * 2;
+                        this.vx *= 0.3;
+                        this.vy = Math.abs(this.vy);
+                        this.maxLife = 600;
+                        break;
+                    case 'fire':
+                        this.hue = 0 + Math.random() * 60;
+                        this.gravity = -0.15;
+                        this.friction = 0.96;
+                        this.maxLife = 100;
+                        this.vy = -Math.abs(this.vy) * 2;
+                        break;
+                    case 'rainbow':
+                        this.hue = (frameCount * 2 + Math.random() * 60) % 360;
+                        this.gravity = 0.08;
+                        this.size = 3 + Math.random() * 4;
+                        this.maxLife = 600;
+                        break;
+                    case 'fireworks':
+                        this.maxLife = 120;
+                        this.vx = (Math.random() - 0.5) * 8;
+                        this.vy = (Math.random() - 0.5) * 8;
+                        this.size = 2 + Math.random() * 2;
+                        this.trail = [];
+                        break;
+                    case 'bubbles':
+                        this.hue = 180 + Math.random() * 60;
+                        this.gravity = -0.05;
+                        this.friction = 0.99;
+                        this.size = 5 + Math.random() * 15;
+                        this.vx *= 0.5;
+                        this.vy = -Math.abs(Math.random() * 2);
+                        this.wobble = Math.random() * Math.PI * 2;
+                        this.maxLife = 600;
+                        break;
+                    case 'snow':
+                        this.hue = 200;
+                        this.gravity = 0.02;
+                        this.friction = 0.99;
+                        this.size = 2 + Math.random() * 3;
+                        this.vx = (Math.random() - 0.5) * 0.5;
+                        this.vy = Math.random() * 0.5;
+                        this.wobble = Math.random() * Math.PI * 2;
+                        this.maxLife = 600;
+                        break;
+                    case 'lava':
+                        this.hue = 10 + Math.random() * 30;
+                        this.gravity = 0.25;
+                        this.friction = 0.92;
+                        this.size = 4 + Math.random() * 3;
+                        this.glow = true;
+                        this.maxLife = 600;
+                        break;
+                    case 'electricity':
+                        this.hue = 180 + Math.random() * 60;
+                        this.maxLife = 20;
+                        this.size = 1 + Math.random() * 2;
+                        this.vx = (Math.random() - 0.5) * 15;
+                        this.vy = (Math.random() - 0.5) * 15;
+                        this.gravity = 0;
+                        this.friction = 0.85;
+                        this.branches = [];
+                        break;
+                    case 'stars':
+                        this.hue = 40 + Math.random() * 80;
+                        this.size = 2 + Math.random() * 4;
+                        this.gravity = 0.02;
+                        this.twinkle = Math.random() * Math.PI * 2;
+                        this.vx *= 0.3;
+                        this.vy *= 0.3;
+                        this.maxLife = 600;
+                        break;
+                    case 'smoke':
+                        this.hue = 0;
+                        this.gravity = -0.08;
+                        this.friction = 0.98;
+                        this.size = 5 + Math.random() * 10;
+                        this.maxLife = 200;
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = -Math.random() * 2;
+                        break;
+                    case 'paint':
+                        this.hue = Math.random() * 360;
+                        this.gravity = 0.15;
+                        this.friction = 0.96;
+                        this.size = 3 + Math.random() * 5;
+                        this.splat = false;
+                        this.maxLife = 600;
+                        break;
+                    case 'plasma':
+                        this.hue = 270 + Math.random() * 60;
+                        this.size = 3 + Math.random() * 6;
+                        this.gravity = 0;
+                        this.friction = 0.99;
+                        this.orbitRadius = 20 + Math.random() * 30;
+                        this.orbitSpeed = 0.05 + Math.random() * 0.05;
+                        this.orbitAngle = Math.random() * Math.PI * 2;
+                        this.maxLife = 600;
+                        break;
+                    case 'spiral':
+                        this.hue = Math.random() * 360;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.spiralAngle = 0;
+                        this.spiralRadius = 0;
+                        this.spiralSpeed = 0.1 + Math.random() * 0.1;
+                        this.maxLife = 600;
+                        break;
+                    case 'confetti':
+                        this.hue = Math.random() * 360;
+                        this.size = 3 + Math.random() * 4;
+                        this.gravity = 0.15;
+                        this.friction = 0.98;
+                        this.rotationSpeed = (Math.random() - 0.5) * 0.3;
+                        this.flatness = 0.3 + Math.random() * 0.3;
+                        this.maxLife = 600;
+                        break;
+                    case 'magic':
+                        this.hue = Math.random() * 360;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = -0.02;
+                        this.friction = 0.99;
+                        this.sparkle = Math.random() * Math.PI * 2;
+                        this.vx = (Math.random() - 0.5) * 3;
+                        this.vy = (Math.random() - 0.5) * 3;
+                        this.maxLife = 600;
+                        break;
+                    case 'meteor':
+                        this.hue = 20 + Math.random() * 40;
+                        this.size = 4 + Math.random() * 6;
+                        this.gravity = 0.3;
+                        this.friction = 0.99;
+                        this.vx = (Math.random() - 0.5) * 10;
+                        this.vy = Math.random() * 5;
+                        this.trail = [];
+                        this.maxLife = 150;
+                        break;
+                    case 'crystal':
+                        this.hue = 180 + Math.random() * 60;
+                        this.size = 3 + Math.random() * 5;
+                        this.gravity = 0.2;
+                        this.friction = 0.95;
+                        this.sides = Math.floor(3 + Math.random() * 4);
+                        this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+                        this.maxLife = 600;
+                        break;
+                    case 'wind':
+                        this.hue = 180;
+                        this.size = 2 + Math.random() * 2;
+                        this.gravity = 0;
+                        this.friction = 0.99;
+                        this.maxLife = 100;
+                        this.vx = 3 + Math.random() * 5;
+                        this.vy = (Math.random() - 0.5) * 2;
+                        break;
+                    case 'hearts':
+                        this.hue = 340 + Math.random() * 40;
+                        this.size = 4 + Math.random() * 4;
+                        this.gravity = 0.05;
+                        this.friction = 0.99;
+                        this.wobble = Math.random() * Math.PI * 2;
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = -Math.random() * 2;
+                        this.maxLife = 600;
+                        break;
+                    case 'vortex':
+                        this.hue = 200 + Math.random() * 60;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.friction = 0.98;
+                        this.angle = Math.atan2(this.vy, this.vx);
+                        this.speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                        this.maxLife = 600;
+                        break;
+                    case 'lightning':
+                        this.hue = 60 + Math.random() * 20;
+                        this.size = 2 + Math.random() * 3;
+                        this.maxLife = 15;
+                        this.vx = (Math.random() - 0.5) * 20;
+                        this.vy = (Math.random() - 0.5) * 20;
+                        this.gravity = 0;
+                        this.friction = 0.8;
+                        this.segments = [];
+                        break;
+                    case 'DNA':
+                        this.hue = 120 + Math.random() * 120;
+                        this.size = 2 + Math.random() * 2;
+                        this.gravity = 0;
+                        this.helixAngle = Math.random() * Math.PI * 2;
+                        this.helixRadius = 20 + Math.random() * 10;
+                        this.helixSpeed = 0.05;
+                        this.pair = null;
+                        this.maxLife = 600;
+                        break;
+                    case 'galaxy':
+                        this.hue = 240 + Math.random() * 60;
+                        this.size = 1 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.friction = 0.995;
+                        this.orbitAngle = Math.random() * Math.PI * 2;
+                        this.orbitRadius = Math.random() * 50;
+                        this.orbitSpeed = 0.02 + Math.random() * 0.03;
+                        this.maxLife = 600;
+                        break;
+                    case 'atoms':
+                        this.hue = Math.random() * 360;
+                        this.size = 3 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.friction = 1.0;
+                        this.electrons = [];
+                        for (let i = 0; i < 3; i++) {
+                            this.electrons.push({
+                                angle: (i / 3) * Math.PI * 2,
+                                radius: 10 + i * 8,
+                                speed: 0.1 - i * 0.02
+                            });
+                        }
+                        this.maxLife = 600;
+                        break;
+                    case 'flowers':
+                        this.hue = Math.random() * 360;
+                        this.size = 4 + Math.random() * 4;
+                        this.gravity = 0.1;
+                        this.friction = 0.98;
+                        this.petals = Math.floor(5 + Math.random() * 3);
+                        this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+                        this.vy = -Math.random() * 3;
+                        this.maxLife = 600;
+                        break;
+                    case 'butterflies':
+                        this.hue = Math.random() * 360;
+                        this.size = 5 + Math.random() * 5;
+                        this.gravity = -0.02;
+                        this.friction = 0.99;
+                        this.flapSpeed = 0.2 + Math.random() * 0.2;
+                        this.flapPhase = Math.random() * Math.PI * 2;
+                        this.targetX = Math.random() * canvas.width;
+                        this.targetY = Math.random() * canvas.height;
+                        this.maxLife = 600;
+                        break;
+                    case 'fireflies':
+                        this.hue = 60 + Math.random() * 30;
+                        this.size = 2 + Math.random() * 2;
+                        this.gravity = 0;
+                        this.friction = 0.98;
+                        this.glow = Math.random() * Math.PI * 2;
+                        this.glowSpeed = 0.1 + Math.random() * 0.1;
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = (Math.random() - 0.5) * 2;
+                        this.maxLife = 600;
+                        break;
+                    case 'blackhole':
+                        this.hue = 280;
+                        this.size = 8 + Math.random() * 8;
+                        this.gravity = 0;
+                        this.friction = 1.0;
+                        this.vx = 0;
+                        this.vy = 0;
+                        this.eventHorizon = this.size * 3;
+                        this.maxLife = 600;
+                        break;
+                    case 'nebula':
+                        this.hue = Math.random() * 360;
+                        this.size = 8 + Math.random() * 15;
+                        this.gravity = 0;
+                        this.friction = 0.995;
+                        this.maxLife = 400;
+                        this.vx = (Math.random() - 0.5) * 0.5;
+                        this.vy = (Math.random() - 0.5) * 0.5;
+                        break;
+                    case 'portals':
+                        this.hue = 280 + Math.random() * 80;
+                        this.size = 15 + Math.random() * 10;
+                        this.gravity = 0;
+                        this.friction = 1.0;
+                        this.vx = 0;
+                        this.vy = 0;
+                        this.spinSpeed = 0.1;
+                        this.spinAngle = 0;
+                        this.maxLife = 600;
+                        break;
+                    case 'music':
+                        this.hue = Math.random() * 360;
+                        this.size = 3 + Math.random() * 3;
+                        this.gravity = -0.05;
+                        this.friction = 0.99;
+                        this.note = Math.floor(Math.random() * 7);
+                        this.bounce = Math.random() * Math.PI * 2;
+                        this.vy = -Math.random() * 3;
+                        this.maxLife = 600;
+                        break;
+                    case 'virus':
+                        this.hue = 120 + Math.random() * 60;
+                        this.size = 5 + Math.random() * 5;
+                        this.gravity = 0;
+                        this.friction = 0.99;
+                        this.spikes = 8 + Math.floor(Math.random() * 8);
+                        this.pulseSpeed = 0.1 + Math.random() * 0.1;
+                        this.pulsePhase = Math.random() * Math.PI * 2;
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = (Math.random() - 0.5) * 2;
+                        this.maxLife = 600;
+                        break;
+                    case 'quantum':
+                        this.hue = 180 + Math.random() * 180;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.friction = 1.0;
+                        this.states = [];
+                        for (let i = 0; i < 3; i++) {
+                            this.states.push({
+                                x: this.x + (Math.random() - 0.5) * 50,
+                                y: this.y + (Math.random() - 0.5) * 50,
+                                alpha: 0.3
+                            });
+                        }
+                        this.phaseSpeed = 0.05;
+                        this.maxLife = 600;
+                        break;
+                    default:
+                        // Partículas normales también desaparecen en 10 segundos
+                        this.maxLife = 600;
+                        break;
+                }
+            }
+            
+            update() {
+                this.life++;
+                
+                // Interacciones globales
+                if (isMouseDown && interactionMode !== 'none') {
+                    const dx = mouseX - this.x;
+                    const dy = mouseY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const influence = Math.max(0, 200 - dist) / 200;
+                    
+                    switch(interactionMode) {
+                        case 'attract':
+                            if (dist > 10) {
+                                this.vx += (dx / dist) * influence * 0.5;
+                                this.vy += (dy / dist) * influence * 0.5;
+                            }
+                            break;
+                        case 'repel':
+                            if (dist > 0) {
+                                this.vx -= (dx / dist) * influence * 0.5;
+                                this.vy -= (dy / dist) * influence * 0.5;
+                            }
+                            break;
+                        case 'spin':
+                            const angle = Math.atan2(dy, dx) + Math.PI / 2;
+                            this.vx += Math.cos(angle) * influence * 0.5;
+                            this.vy += Math.sin(angle) * influence * 0.5;
+                            break;
+                        case 'follow':
+                            this.vx += (dx * 0.01) * influence;
+                            this.vy += (dy * 0.01) * influence;
+                            break;
+                        case 'wave':
+                            const waveAngle = Math.atan2(dy, dx);
+                            this.vx += Math.cos(waveAngle + this.life * 0.1) * influence * 0.3;
+                            this.vy += Math.sin(waveAngle + this.life * 0.1) * influence * 0.3;
+                            break;
+                        case 'explode':
+                            if (dist < 100 && dist > 0) {
+                                this.vx -= (dx / dist) * influence * 2;
+                                this.vy -= (dy / dist) * influence * 2;
+                            }
+                            break;
+                    }
+                }
+                
+                // Física especial por tipo
+                if (this.type === 'gravity') {
+                    const dx = mouseX - this.x;
+                    const dy = mouseY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        this.vx += dx / dist * 0.5;
+                        this.vy += dy / dist * 0.5;
+                    }
+                } else if (this.type === 'plasma') {
+                    this.orbitAngle += this.orbitSpeed * timeScale;
+                    this.vx += Math.cos(this.orbitAngle) * 0.3;
+                    this.vy += Math.sin(this.orbitAngle) * 0.3;
+                } else if (this.type === 'spiral') {
+                    this.spiralAngle += this.spiralSpeed * timeScale;
+                    this.spiralRadius += 0.5 * timeScale;
+                    this.vx = Math.cos(this.spiralAngle) * this.spiralRadius * 0.1;
+                    this.vy = Math.sin(this.spiralAngle) * this.spiralRadius * 0.1;
+                } else if (this.type === 'vortex') {
+                    const dx = canvas.width / 2 - this.x;
+                    const dy = canvas.height / 2 - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist > 5) {
+                        this.angle = Math.atan2(dy, dx);
+                        const tangentAngle = this.angle + Math.PI / 2;
+                        
+                        this.vx += Math.cos(this.angle) * 0.05;
+                        this.vy += Math.sin(this.angle) * 0.05;
+                        this.vx += Math.cos(tangentAngle) * 0.2;
+                        this.vy += Math.sin(tangentAngle) * 0.2;
+                    }
+                } else if (this.type === 'DNA') {
+                    this.helixAngle += this.helixSpeed * timeScale;
+                    this.vx = Math.cos(this.helixAngle) * this.helixRadius * 0.1;
+                    this.vy += 0.5 * timeScale;
+                } else if (this.type === 'galaxy') {
+                    this.orbitAngle += this.orbitSpeed * timeScale;
+                    this.vx += Math.cos(this.orbitAngle) * 0.2;
+                    this.vy += Math.sin(this.orbitAngle) * 0.2;
+                } else if (this.type === 'butterflies') {
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 50) {
+                        this.targetX = Math.random() * canvas.width;
+                        this.targetY = Math.random() * canvas.height;
+                    } else {
+                        this.vx += dx * 0.001;
+                        this.vy += dy * 0.001;
+                    }
+                    this.flapPhase += this.flapSpeed * timeScale;
+                } else if (this.type === 'fireflies') {
+                    this.glow += this.glowSpeed * timeScale;
+                } else if (this.type === 'blackhole') {
+                    // Atraer partículas cercanas (optimizado)
+                    const checkRadius = this.eventHorizon;
+                    for (let i = 0; i < particles.length; i++) {
+                        const p = particles[i];
+                        if (p !== this && p.type !== 'blackhole') {
+                            const dx = this.x - p.x;
+                            const dy = this.y - p.y;
+                            
+                            // Quick distance check antes de sqrt
+                            const distSq = dx * dx + dy * dy;
+                            if (distSq < checkRadius * checkRadius) {
+                                const dist = Math.sqrt(distSq);
+                                
+                                if (dist > 0) {
+                                    const force = (checkRadius - dist) / checkRadius;
+                                    p.vx += (dx / dist) * force * 0.5;
+                                    p.vy += (dy / dist) * force * 0.5;
+                                }
+                            }
+                        }
+                    }
+                } else if (this.type === 'portals') {
+                    this.spinAngle += this.spinSpeed * timeScale;
+                } else if (this.type === 'music') {
+                    this.bounce += 0.1 * timeScale;
+                    this.vx += Math.sin(this.bounce) * 0.1;
+                } else if (this.type === 'virus') {
+                    this.pulsePhase += this.pulseSpeed * timeScale;
+                } else if (this.type === 'quantum') {
+                    this.states.forEach(state => {
+                        state.x += (Math.random() - 0.5) * 2;
+                        state.y += (Math.random() - 0.5) * 2;
+                    });
+                } else {
+                    this.vy += this.gravity * timeScale;
+                }
+                
+                // Efectos especiales
+                if (this.type === 'bubbles' || this.type === 'snow' || this.type === 'hearts') {
+                    this.wobble += 0.1 * timeScale;
+                    this.vx += Math.sin(this.wobble) * 0.1;
+                }
+                
+                if (this.type === 'stars') {
+                    this.twinkle += 0.1 * timeScale;
+                }
+                
+                if (this.type === 'magic') {
+                    this.sparkle += 0.15 * timeScale;
+                    this.hue = (this.hue + 2 * timeScale) % 360;
+                }
+                
+                if (this.type === 'atoms') {
+                    this.electrons.forEach(e => {
+                        e.angle += e.speed * timeScale;
+                    });
+                }
+                
+                this.rotation += this.rotationSpeed * timeScale;
+                
+                // Viento global
+                this.vx += globalWind * 0.01 * timeScale;
+                
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                
+                this.x += this.vx * timeScale;
+                this.y += this.vy * timeScale;
+                
+                // Rebote en las paredes
+                if (this.x < 0 || this.x > canvas.width) {
+                    this.vx *= -0.7;
+                    this.x = Math.max(0, Math.min(canvas.width, this.x));
+                }
+                if (this.y < 0 || this.y > canvas.height) {
+                    this.vy *= -0.7;
+                    this.y = Math.max(0, Math.min(canvas.height, this.y));
+                    
+                    // Fricción adicional para arena, agua y pintura al tocar el suelo
+                    if ((this.type === 'sand' || this.type === 'water' || this.type === 'paint') && this.y >= canvas.height - 1) {
+                        this.vx *= 0.85;
+                        if (Math.abs(this.vy) < 0.3) {
+                            this.vy = 0;
+                            this.vx *= 0.9;
+                        }
+                    }
+                }
+                
+                // Alpha fade solo para partículas temporales
+                if (this.maxLife !== Infinity) {
+                    this.alpha = 1 - (this.life / this.maxLife);
+                }
+                
+                return this.life < this.maxLife;
+            }
+            
+            init() {
+                switch(this.type) {
+                    case 'water':
+                        this.hue = 200 + Math.random() * 40;
+                        this.gravity = 0.2;
+                        this.friction = 0.95;
+                        this.size = 3 + Math.random() * 2;
+                        break;
+                    case 'sand':
+                        this.hue = 30 + Math.random() * 30;
+                        this.gravity = 0.3;
+                        this.friction = 0.9;
+                        this.size = 2 + Math.random() * 2;
+                        this.vx *= 0.3;
+                        this.vy = Math.abs(this.vy);
+                        break;
+                    case 'fire':
+                        this.hue = 0 + Math.random() * 60;
+                        this.gravity = -0.15;
+                        this.friction = 0.96;
+                        this.maxLife = 100;
+                        this.vy = -Math.abs(this.vy) * 2;
+                        break;
+                    case 'rainbow':
+                        this.hue = (frameCount * 2 + Math.random() * 60) % 360;
+                        this.gravity = 0.08;
+                        this.size = 3 + Math.random() * 4;
+                        break;
+                    case 'fireworks':
+                        this.maxLife = 120;
+                        this.vx = (Math.random() - 0.5) * 8;
+                        this.vy = (Math.random() - 0.5) * 8;
+                        this.size = 2 + Math.random() * 2;
+                        this.trail = [];
+                        break;
+                    case 'bubbles':
+                        this.hue = 180 + Math.random() * 60;
+                        this.gravity = -0.05;
+                        this.friction = 0.99;
+                        this.size = 5 + Math.random() * 15;
+                        this.vx *= 0.5;
+                        this.vy = -Math.abs(Math.random() * 2);
+                        this.wobble = Math.random() * Math.PI * 2;
+                        this.maxLife = 300;
+                        break;
+                    case 'snow':
+                        this.hue = 200;
+                        this.gravity = 0.02;
+                        this.friction = 0.99;
+                        this.size = 2 + Math.random() * 3;
+                        this.vx = (Math.random() - 0.5) * 0.5;
+                        this.vy = Math.random() * 0.5;
+                        this.wobble = Math.random() * Math.PI * 2;
+                        break;
+                    case 'lava':
+                        this.hue = 10 + Math.random() * 30;
+                        this.gravity = 0.25;
+                        this.friction = 0.92;
+                        this.size = 4 + Math.random() * 3;
+                        this.glow = true;
+                        break;
+                    case 'electricity':
+                        this.hue = 180 + Math.random() * 60;
+                        this.maxLife = 20;
+                        this.size = 1 + Math.random() * 2;
+                        this.vx = (Math.random() - 0.5) * 15;
+                        this.vy = (Math.random() - 0.5) * 15;
+                        this.gravity = 0;
+                        this.friction = 0.85;
+                        this.branches = [];
+                        break;
+                    case 'stars':
+                        this.hue = 40 + Math.random() * 80;
+                        this.size = 2 + Math.random() * 4;
+                        this.gravity = 0.02;
+                        this.twinkle = Math.random() * Math.PI * 2;
+                        this.vx *= 0.3;
+                        this.vy *= 0.3;
+                        break;
+                    case 'smoke':
+                        this.hue = 0;
+                        this.gravity = -0.08;
+                        this.friction = 0.98;
+                        this.size = 5 + Math.random() * 10;
+                        this.maxLife = 200;
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = -Math.random() * 2;
+                        break;
+                    case 'paint':
+                        this.hue = Math.random() * 360;
+                        this.gravity = 0.15;
+                        this.friction = 0.96;
+                        this.size = 3 + Math.random() * 5;
+                        this.splat = false;
+                        break;
+                    case 'plasma':
+                        this.hue = 270 + Math.random() * 60;
+                        this.size = 3 + Math.random() * 6;
+                        this.gravity = 0;
+                        this.friction = 0.99;
+                        this.orbitRadius = 20 + Math.random() * 30;
+                        this.orbitSpeed = 0.05 + Math.random() * 0.05;
+                        this.orbitAngle = Math.random() * Math.PI * 2;
+                        break;
+                    case 'spiral':
+                        this.hue = Math.random() * 360;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.spiralAngle = 0;
+                        this.spiralRadius = 0;
+                        this.spiralSpeed = 0.1 + Math.random() * 0.1;
+                        break;
+                    case 'confetti':
+                        this.hue = Math.random() * 360;
+                        this.size = 3 + Math.random() * 4;
+                        this.gravity = 0.15;
+                        this.friction = 0.98;
+                        this.rotationSpeed = (Math.random() - 0.5) * 0.3;
+                        this.flatness = 0.3 + Math.random() * 0.3;
+                        break;
+                    case 'magic':
+                        this.hue = Math.random() * 360;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = -0.02;
+                        this.friction = 0.99;
+                        this.sparkle = Math.random() * Math.PI * 2;
+                        this.vx = (Math.random() - 0.5) * 3;
+                        this.vy = (Math.random() - 0.5) * 3;
+                        break;
+                    case 'meteor':
+                        this.hue = 20 + Math.random() * 40;
+                        this.size = 4 + Math.random() * 6;
+                        this.gravity = 0.3;
+                        this.friction = 0.99;
+                        this.vx = (Math.random() - 0.5) * 10;
+                        this.vy = Math.random() * 5;
+                        this.trail = [];
+                        this.maxLife = 150;
+                        break;
+                    case 'crystal':
+                        this.hue = 180 + Math.random() * 60;
+                        this.size = 3 + Math.random() * 5;
+                        this.gravity = 0.2;
+                        this.friction = 0.95;
+                        this.sides = Math.floor(3 + Math.random() * 4);
+                        this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+                        break;
+                    case 'wind':
+                        this.hue = 180;
+                        this.size = 2 + Math.random() * 2;
+                        this.gravity = 0;
+                        this.friction = 0.99;
+                        this.maxLife = 100;
+                        this.vx = 3 + Math.random() * 5;
+                        this.vy = (Math.random() - 0.5) * 2;
+                        break;
+                    case 'hearts':
+                        this.hue = 340 + Math.random() * 40;
+                        this.size = 4 + Math.random() * 4;
+                        this.gravity = 0.05;
+                        this.friction = 0.99;
+                        this.wobble = Math.random() * Math.PI * 2;
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = -Math.random() * 2;
+                        break;
+                    case 'vortex':
+                        this.hue = 200 + Math.random() * 60;
+                        this.size = 2 + Math.random() * 3;
+                        this.gravity = 0;
+                        this.friction = 0.98;
+                        this.angle = Math.atan2(this.vy, this.vx);
+                        this.speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                        break;
+                }
+            }
+            
+            update() {
+                this.life++;
+                
+                // Física especial por tipo
+                if (this.type === 'gravity') {
+                    const dx = mouseX - this.x;
+                    const dy = mouseY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        this.vx += dx / dist * 0.5;
+                        this.vy += dy / dist * 0.5;
+                    }
+                } else if (this.type === 'plasma') {
+                    this.orbitAngle += this.orbitSpeed * timeScale;
+                    this.vx += Math.cos(this.orbitAngle) * 0.3;
+                    this.vy += Math.sin(this.orbitAngle) * 0.3;
+                } else if (this.type === 'spiral') {
+                    this.spiralAngle += this.spiralSpeed * timeScale;
+                    this.spiralRadius += 0.5 * timeScale;
+                    this.vx = Math.cos(this.spiralAngle) * this.spiralRadius * 0.1;
+                    this.vy = Math.sin(this.spiralAngle) * this.spiralRadius * 0.1;
+                } else if (this.type === 'vortex') {
+                    const dx = canvas.width / 2 - this.x;
+                    const dy = canvas.height / 2 - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist > 5) {
+                        this.angle = Math.atan2(dy, dx);
+                        const tangentAngle = this.angle + Math.PI / 2;
+                        
+                        this.vx += Math.cos(this.angle) * 0.05;
+                        this.vy += Math.sin(this.angle) * 0.05;
+                        this.vx += Math.cos(tangentAngle) * 0.2;
+                        this.vy += Math.sin(tangentAngle) * 0.2;
+                    }
+                } else {
+                    this.vy += this.gravity * timeScale;
+                }
+                
+                // Efectos especiales
+                if (this.type === 'bubbles' || this.type === 'snow' || this.type === 'hearts') {
+                    this.wobble += 0.1 * timeScale;
+                    this.vx += Math.sin(this.wobble) * 0.1;
+                }
+                
+                if (this.type === 'stars') {
+                    this.twinkle += 0.1 * timeScale;
+                }
+                
+                if (this.type === 'magic') {
+                    this.sparkle += 0.15 * timeScale;
+                    this.hue = (this.hue + 2 * timeScale) % 360;
+                }
+                
+                this.rotation += this.rotationSpeed * timeScale;
+                
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                
+                this.x += this.vx * timeScale;
+                this.y += this.vy * timeScale;
+                
+                // Colisiones con bordes
+                if (this.x < 0 || this.x > canvas.width) {
+                    this.vx *= -0.5;
+                    this.x = Math.max(0, Math.min(canvas.width, this.x));
+                }
+                if (this.y < 0 || this.y > canvas.height) {
+                    this.vy *= -0.5;
+                    this.y = Math.max(0, Math.min(canvas.height, this.y));
+                    
+                    if (this.type === 'sand' || this.type === 'water' || this.type === 'paint') {
+                        this.vx *= 0.8;
+                        if (Math.abs(this.vy) < 0.5) {
+                            this.vy = 0;
+                            this.vx *= 0.95;
+                        }
+                    }
+                }
+                
+                // Alpha fade para todas las partículas (smooth fadeout en los últimos 2 segundos)
+                const fadeStart = this.maxLife - 120; // Últimos 2 segundos
+                if (this.life > fadeStart) {
+                    this.alpha = 1 - ((this.life - fadeStart) / 120);
+                } else {
+                    this.alpha = 1;
+                }
+                
+                return this.life < this.maxLife;
+            }
+            
+            draw() {
+                ctx.save();
+                
+                // Trails para ciertos tipos
+                if ((this.type === 'fireworks' || this.type === 'meteor') && this.trail) {
+                    this.trail.push({x: this.x, y: this.y});
+                    if (this.trail.length > 15) this.trail.shift();
+                    
+                    for (let i = 0; i < this.trail.length; i++) {
+                        const t = this.trail[i];
+                        const alpha = (i / this.trail.length) * this.alpha;
+                        ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${alpha})`;
+                        const size = this.size * (i / this.trail.length);
+                        ctx.fillRect(t.x - size/2, t.y - size/2, size, size);
+                    }
+                }
+                
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                // Dibujo específico por tipo
+                if (this.type === 'bubbles') {
+                    const gradient = ctx.createRadialGradient(
+                        -this.size * 0.3, -this.size * 0.3, 0,
+                        0, 0, this.size
+                    );
+                    gradient.addColorStop(0, `hsla(${this.hue}, 80%, 80%, ${this.alpha * 0.3})`);
+                    gradient.addColorStop(0.5, `hsla(${this.hue}, 80%, 70%, ${this.alpha * 0.2})`);
+                    gradient.addColorStop(1, `hsla(${this.hue}, 80%, 60%, ${this.alpha * 0.1})`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = `hsla(${this.hue}, 80%, 90%, ${this.alpha * 0.6})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                } else if (this.type === 'stars') {
+                    const points = 5;
+                    const outerRadius = this.size;
+                    const innerRadius = this.size / 2;
+                    const alphaVal = 0.5 + Math.sin(this.twinkle) * 0.5;
+                    
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${alphaVal})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 70%, ${alphaVal * 0.5})`;
+                    }
+                    
+                    ctx.beginPath();
+                    for (let i = 0; i < points * 2; i++) {
+                        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                        const angle = (i * Math.PI) / points;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                } else if (this.type === 'crystal') {
+                    ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, ${this.alpha})`;
+                    ctx.strokeStyle = `hsla(${this.hue}, 100%, 80%, ${this.alpha})`;
+                    ctx.lineWidth = 1;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 70%, 0.6)`;
+                    }
+                    
+                    ctx.beginPath();
+                    for (let i = 0; i < this.sides; i++) {
+                        const angle = (i * Math.PI * 2) / this.sides;
+                        const x = Math.cos(angle) * this.size;
+                        const y = Math.sin(angle) * this.size;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                } else if (this.type === 'hearts') {
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.6)`;
+                    }
+                    
+                    const size = this.size;
+                    ctx.beginPath();
+                    ctx.moveTo(0, size / 4);
+                    ctx.bezierCurveTo(-size, -size / 2, -size / 2, -size, 0, -size / 4);
+                    ctx.bezierCurveTo(size / 2, -size, size, -size / 2, 0, size / 4);
+                    ctx.fill();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                } else if (this.type === 'confetti') {
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    ctx.fillRect(-this.size, -this.size * this.flatness, this.size * 2, this.size * this.flatness * 2);
+                } else if (this.type === 'smoke') {
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                    gradient.addColorStop(0, `hsla(0, 0%, 60%, ${this.alpha * 0.3})`);
+                    gradient.addColorStop(1, `hsla(0, 0%, 40%, 0)`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'electricity' || this.type === 'lightning') {
+                    ctx.strokeStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha})`;
+                    ctx.lineWidth = 2;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 70%, ${this.alpha * 0.5})`;
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(this.vx * 0.5, this.vy * 0.5);
+                    ctx.stroke();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                } else if (this.type === 'DNA') {
+                    ctx.strokeStyle = `hsla(${this.hue}, 80%, 60%, ${this.alpha})`;
+                    ctx.lineWidth = 2;
+                    const radius = this.helixRadius;
+                    const x1 = Math.cos(this.helixAngle) * radius;
+                    const x2 = Math.cos(this.helixAngle + Math.PI) * radius;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x1, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(x2, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x1, 0);
+                    ctx.lineTo(x2, 0);
+                    ctx.stroke();
+                } else if (this.type === 'atoms') {
+                    // Núcleo
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.6)`;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                    
+                    // Órbitas de electrones
+                    ctx.strokeStyle = `hsla(${this.hue}, 60%, 50%, 0.3)`;
+                    ctx.lineWidth = 1;
+                    this.electrons.forEach(e => {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        const ex = Math.cos(e.angle) * e.radius;
+                        const ey = Math.sin(e.angle) * e.radius;
+                        ctx.fillStyle = `hsla(${(this.hue + 120) % 360}, 100%, 60%, ${this.alpha})`;
+                        ctx.beginPath();
+                        ctx.arc(ex, ey, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                } else if (this.type === 'flowers') {
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.5)`;
+                    }
+                    
+                    for (let i = 0; i < this.petals; i++) {
+                        const angle = (i / this.petals) * Math.PI * 2;
+                        const px = Math.cos(angle) * this.size * 0.7;
+                        const py = Math.sin(angle) * this.size * 0.7;
+                        
+                        ctx.beginPath();
+                        ctx.ellipse(px, py, this.size * 0.4, this.size * 0.6, angle, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                    
+                    // Centro
+                    ctx.fillStyle = `hsla(${(this.hue + 180) % 360}, 100%, 50%, ${this.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'butterflies') {
+                    const wingFlap = Math.sin(this.flapPhase) * 0.5 + 0.5;
+                    
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 6;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.5)`;
+                    }
+                    
+                    // Ala izquierda
+                    ctx.beginPath();
+                    ctx.ellipse(-this.size * 0.5, 0, this.size * wingFlap, this.size * 0.7, -Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Ala derecha
+                    ctx.beginPath();
+                    ctx.ellipse(this.size * 0.5, 0, this.size * wingFlap, this.size * 0.7, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                    
+                    // Cuerpo
+                    ctx.fillStyle = `hsla(${this.hue}, 50%, 30%, ${this.alpha})`;
+                    ctx.fillRect(-this.size * 0.1, -this.size * 0.5, this.size * 0.2, this.size);
+                } else if (this.type === 'fireflies') {
+                    const glowIntensity = 0.5 + Math.sin(this.glow) * 0.5;
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha * glowIntensity})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 15 * glowIntensity;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 70%, ${glowIntensity * 0.8})`;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                } else if (this.type === 'blackhole') {
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                    gradient.addColorStop(0, `hsla(${this.hue}, 100%, 20%, ${this.alpha})`);
+                    gradient.addColorStop(0.5, `hsla(${this.hue}, 80%, 10%, ${this.alpha * 0.8})`);
+                    gradient.addColorStop(1, `hsla(${this.hue}, 60%, 5%, 0)`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.eventHorizon, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 10%, ${this.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'nebula') {
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                    gradient.addColorStop(0, `hsla(${this.hue}, 100%, 60%, ${this.alpha * 0.4})`);
+                    gradient.addColorStop(0.5, `hsla(${this.hue + 30}, 100%, 50%, ${this.alpha * 0.2})`);
+                    gradient.addColorStop(1, `hsla(${this.hue + 60}, 100%, 40%, 0)`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'portals') {
+                    // Anillo exterior
+                    for (let r = 3; r > 0; r--) {
+                        const gradient = ctx.createRadialGradient(0, 0, this.size * (r - 1) / 3, 0, 0, this.size * r / 3);
+                        gradient.addColorStop(0, `hsla(${this.hue + r * 20}, 100%, 60%, ${this.alpha * 0.3})`);
+                        gradient.addColorStop(1, `hsla(${this.hue + r * 20}, 100%, 40%, 0)`);
+                        
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.size * r / 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Centro oscuro
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 10%, ${this.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'music') {
+                    const noteSymbols = ['♪', '♫', '♬', '♭', '♮', '♯', '𝄞'];
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.8)`;
+                    }
+                    ctx.font = `${this.size * 3}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(noteSymbols[this.note % noteSymbols.length], 0, 0);
+                } else if (this.type === 'virus') {
+                    const pulseSize = this.size * (1 + Math.sin(this.pulsePhase) * 0.2);
+                    
+                    // Cuerpo
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 50%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 50%, 0.5)`;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(0, 0, pulseSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (enableGlow) ctx.shadowBlur = 0;
+                    
+                    // Espinas
+                    ctx.strokeStyle = `hsla(${this.hue}, 100%, 40%, ${this.alpha})`;
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < this.spikes; i++) {
+                        const angle = (i / this.spikes) * Math.PI * 2;
+                        const x1 = Math.cos(angle) * pulseSize;
+                        const y1 = Math.sin(angle) * pulseSize;
+                        const x2 = Math.cos(angle) * (pulseSize + 4);
+                        const y2 = Math.sin(angle) * (pulseSize + 4);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
+                    }
+                } else if (this.type === 'quantum') {
+                    // Dibujar estados superpuestos
+                    this.states.forEach((state, i) => {
+                        ctx.fillStyle = `hsla(${this.hue + i * 60}, 100%, 60%, ${state.alpha})`;
+                        if (enableGlow) {
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = `hsla(${this.hue + i * 60}, 100%, 60%, ${state.alpha * 0.5})`;
+                        }
+                        ctx.beginPath();
+                        ctx.arc(state.x - this.x, state.y - this.y, this.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        if (enableGlow) ctx.shadowBlur = 0;
+                    });
+                    
+                    // Conexiones
+                    ctx.strokeStyle = `hsla(${this.hue}, 70%, 60%, 0.3)`;
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < this.states.length; i++) {
+                        for (let j = i + 1; j < this.states.length; j++) {
+                            ctx.beginPath();
+                            ctx.moveTo(this.states[i].x - this.x, this.states[i].y - this.y);
+                            ctx.lineTo(this.states[j].x - this.x, this.states[j].y - this.y);
+                            ctx.stroke();
+                        }
+                    }
+                } else {
+                    // Partículas normales
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    if (enableGlow) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Resetear sombra para rendimiento
+                    if (enableGlow) {
+                        ctx.shadowBlur = 0;
+                    }
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        // Event listeners
+        canvas.addEventListener('mousedown', () => isMouseDown = true);
+        canvas.addEventListener('mouseup', () => isMouseDown = false);
+        canvas.addEventListener('mouseleave', () => isMouseDown = false);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            cursor.style.left = mouseX - 15 + 'px';
+            cursor.style.top = mouseY - 15 + 'px';
+            cursor.style.width = brushSize + 'px';
+            cursor.style.height = brushSize + 'px';
+            
+            if (isMouseDown && currentTool !== 'eraser' && currentTool !== 'gravity') {
+                // Limitar creación de partículas si hay demasiadas
+                if (particles.length < MAX_PARTICLES) {
+                    for (let i = 0; i < intensity; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * brushSize / 2;
+                        const x = mouseX + Math.cos(angle) * radius;
+                        const y = mouseY + Math.sin(angle) * radius;
+                        particles.push(new Particle(x, y, currentTool));
+                    }
+                }
+            } else if (isMouseDown && currentTool === 'eraser') {
+                particles = particles.filter(p => {
+                    const dx = p.x - mouseX;
+                    const dy = p.y - mouseY;
+                    return Math.sqrt(dx * dx + dy * dy) > brushSize;
+                });
+            }
+        });
+        
+        // Herramientas
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTool = btn.dataset.tool;
+            });
+        });
+        
+        // Controles
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeValue = document.getElementById('sizeValue');
+        sizeSlider.addEventListener('input', (e) => {
+            brushSize = parseInt(e.target.value);
+            sizeValue.textContent = brushSize;
+        });
+        
+        const intensitySlider = document.getElementById('intensitySlider');
+        const intensityValue = document.getElementById('intensityValue');
+        intensitySlider.addEventListener('input', (e) => {
+            intensity = parseInt(e.target.value);
+            intensityValue.textContent = intensity;
+        });
+        
+        const gravitySlider = document.getElementById('gravitySlider');
+        const gravityValue = document.getElementById('gravityValue');
+        gravitySlider.addEventListener('input', (e) => {
+            globalGravity = parseInt(e.target.value) / 100;
+            gravityValue.textContent = globalGravity.toFixed(2);
+        });
+        
+        const frictionSlider = document.getElementById('frictionSlider');
+        const frictionValue = document.getElementById('frictionValue');
+        frictionSlider.addEventListener('input', (e) => {
+            globalFriction = parseInt(e.target.value) / 100;
+            frictionValue.textContent = globalFriction.toFixed(2);
+        });
+        
+        const windSlider = document.getElementById('windSlider');
+        const windValue = document.getElementById('windValue');
+        windSlider.addEventListener('input', (e) => {
+            globalWind = parseInt(e.target.value);
+            windValue.textContent = globalWind;
+        });
+        
+        const interactionSelect = document.getElementById('interactionMode');
+        interactionSelect.addEventListener('change', (e) => {
+            interactionMode = e.target.value;
+        });
+        
+        const pauseBtn = document.getElementById('pauseBtn');
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? '▶️ Reanudar' : '⏸️ Pausar';
+        });
+        
+        const slowBtn = document.getElementById('slowBtn');
+        let isSlowMo = false;
+        slowBtn.addEventListener('click', () => {
+            isSlowMo = !isSlowMo;
+            timeScale = isSlowMo ? 0.2 : 1.0;
+            slowBtn.textContent = isSlowMo ? '⚡ Normal' : '🐌 Slow-Mo';
+        });
+        
+        const trailsBtn = document.getElementById('trailsBtn');
+        trailsBtn.addEventListener('click', () => {
+            enableTrails = !enableTrails;
+            trailsBtn.style.background = enableTrails ? 'rgba(102, 234, 102, 0.4)' : 'rgba(234, 102, 102, 0.2)';
+        });
+        
+        const glowBtn = document.getElementById('glowBtn');
+        glowBtn.addEventListener('click', () => {
+            enableGlow = !enableGlow;
+            glowBtn.style.background = enableGlow ? 'rgba(102, 234, 102, 0.4)' : 'rgba(234, 102, 102, 0.2)';
+        });
+        
+        const blurBtn = document.getElementById('blurBtn');
+        blurBtn.addEventListener('click', () => {
+            enableBlur = !enableBlur;
+            blurBtn.style.background = enableBlur ? 'rgba(102, 234, 102, 0.4)' : 'rgba(234, 102, 102, 0.2)';
+        });
+        
+        const connectBtn = document.getElementById('connectBtn');
+        connectBtn.addEventListener('click', () => {
+            enableConnect = !enableConnect;
+            connectBtn.style.background = enableConnect ? 'rgba(102, 234, 102, 0.4)' : 'rgba(234, 102, 102, 0.2)';
+        });
+        
+        const screenshakeBtn = document.getElementById('screenshakeBtn');
+        screenshakeBtn.addEventListener('click', () => {
+            screenshakeEnabled = !screenshakeEnabled;
+            screenshakeBtn.style.background = screenshakeEnabled ? 'rgba(234, 234, 102, 0.4)' : 'rgba(234, 234, 102, 0.2)';
+        });
+        
+        const rainbowBgBtn = document.getElementById('rainbowBgBtn');
+        rainbowBgBtn.addEventListener('click', () => {
+            rainbowBg = !rainbowBg;
+            rainbowBgBtn.style.background = rainbowBg ? 'rgba(234, 102, 234, 0.4)' : 'rgba(234, 102, 234, 0.2)';
+        });
+        
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.addEventListener('click', () => {
+            const dataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'sandbox-art-' + Date.now() + '.png';
+            link.href = dataURL;
+            link.click();
+        });
+        
+        const randomBtn = document.getElementById('randomBtn');
+        randomBtn.addEventListener('click', () => {
+            // Crear partículas aleatorias en toda la pantalla
+            const tools = ['particles', 'water', 'sand', 'fire', 'rainbow', 'stars', 'magic', 'crystal', 'hearts', 'flowers', 'butterflies', 'galaxy'];
+            const numToCreate = Math.min(100, MAX_PARTICLES - particles.length);
+            
+            for (let i = 0; i < numToCreate; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const tool = tools[Math.floor(Math.random() * tools.length)];
+                particles.push(new Particle(x, y, tool));
+            }
+        });
+        
+        const clearBtn = document.getElementById('clearBtn');
+        clearBtn.addEventListener('click', () => {
+            particles = [];
+            // Limpiar completamente el canvas
+            ctx.fillStyle = 'rgb(26, 26, 46)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+        
+        // Resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Game loop
+        function animate() {
+            // Fondo dinámico
+            if (rainbowBg) {
+                const bgHue = (frameCount * 0.5) % 360;
+                ctx.fillStyle = `hsla(${bgHue}, 50%, 10%, 0.1)`;
+            } else if (enableTrails) {
+                ctx.fillStyle = 'rgba(26, 26, 46, 0.1)';
+            } else {
+                ctx.fillStyle = 'rgba(26, 26, 46, 0.2)';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Screenshake
+            if (screenshakeEnabled && isMouseDown) {
+                shakeX = (Math.random() - 0.5) * 5;
+                shakeY = (Math.random() - 0.5) * 5;
+            } else {
+                shakeX *= 0.9;
+                shakeY *= 0.9;
+            }
+            
+            ctx.save();
+            ctx.translate(shakeX, shakeY);
+            
+            // Blur effect
+            if (enableBlur) {
+                ctx.filter = 'blur(1px)';
+            }
+            
+            if (!isPaused) {
+                // Update y dibujar partículas con culling optimizado
+                particles = particles.filter(p => {
+                    const alive = p.update();
+                    if (alive) {
+                        // Frustum culling - solo dibujar partículas visibles
+                        const margin = 50; // margen para partículas cerca del borde
+                        if (p.x > -margin && p.x < canvas.width + margin && 
+                            p.y > -margin && p.y < canvas.height + margin) {
+                            p.draw();
+                        }
+                    }
+                    return alive;
+                });
+            } else {
+                // Solo dibujar si está pausado (con culling)
+                particles.forEach(p => {
+                    const margin = 50;
+                    if (p.x > -margin && p.x < canvas.width + margin && 
+                        p.y > -margin && p.y < canvas.height + margin) {
+                        p.draw();
+                    }
+                });
+            }
+            
+            // Conectar partículas cercanas (solo si hay pocas partículas para rendimiento)
+            if (enableConnect && particles.length < 500) {
+                ctx.strokeStyle = 'rgba(102, 126, 234, 0.2)';
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < Math.min(i + 10, particles.length); j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < 100) {
+                            const alpha = (1 - dist / 100) * 0.3;
+                            ctx.strokeStyle = `rgba(102, 126, 234, ${alpha})`;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+            
+            ctx.restore();
+            ctx.filter = 'none';
+            
+            // Stats
+            frameCount++;
+            const now = Date.now();
+            if (now - lastTime > 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+                document.getElementById('fps').textContent = fps;
+            }
+            
+            // Mostrar advertencia si hay muchas partículas
+            const count = particles.length;
+            let countText = count.toString();
+            if (count >= MAX_PARTICLES) {
+                countText += ' (MÁXIMO)';
+            } else if (count > MAX_PARTICLES * 0.8) {
+                countText += ' (⚠️)';
+            }
+            document.getElementById('particleCount').textContent = countText;
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        // Audio context para sonidos satisfactorios
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(frequency, duration, type = 'sine') {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+        
+        // Sonidos al hacer clic
+        let lastSoundTime = 0;
+        canvas.addEventListener('mousedown', () => {
+            const now = Date.now();
+            if (now - lastSoundTime > 50) {
+                const frequencies = {
+                    'particles': 440,
+                    'water': 330,
+                    'sand': 220,
+                    'fire': 550,
+                    'rainbow': 660,
+                    'fireworks': 880,
+                    'bubbles': 520,
+                    'gravity': 392,
+                    'eraser': 165,
+                    'snow': 370,
+                    'lava': 180,
+                    'electricity': 1200,
+                    'stars': 740,
+                    'smoke': 200,
+                    'paint': 490,
+                    'plasma': 620,
+                    'spiral': 580,
+                    'confetti': 800,
+                    'magic': 950,
+                    'meteor': 290,
+                    'crystal': 1100,
+                    'wind': 410,
+                    'hearts': 690,
+                    'vortex': 350,
+                    'lightning': 1400,
+                    'DNA': 720,
+                    'galaxy': 480,
+                    'atoms': 840,
+                    'flowers': 590,
+                    'butterflies': 760,
+                    'fireflies': 680,
+                    'blackhole': 110,
+                    'nebula': 320,
+                    'portals': 560,
+                    'music': 523,
+                    'virus': 420,
+                    'quantum': 1050
+                };
+                
+                const waveTypes = {
+                    'fire': 'sawtooth',
+                    'lava': 'sawtooth',
+                    'electricity': 'square',
+                    'lightning': 'square',
+                    'plasma': 'triangle',
+                    'magic': 'triangle',
+                    'quantum': 'triangle',
+                    'blackhole': 'sawtooth'
+                };
+                
+                playTone(
+                    frequencies[currentTool] || 440, 
+                    0.1, 
+                    waveTypes[currentTool] || 'sine'
+                );
+                lastSoundTime = now;
+            }
+        });
+    </script>
+</body>
+</html>
